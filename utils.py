@@ -1,53 +1,51 @@
 """
 utils.py
-
-Funciones auxiliares de la aplicación (envío de alerta WhatsApp).
-La automatización con pyautogui es opcional: si no está instalada, se informa y
-el envío no se realiza automáticamente.
 """
-
 import time
 import webbrowser
-import threading
-from tkinter import messagebox
+import urllib.parse
+# threading ya no se usa aqui dentro, lo maneja el controller
 
-# Intento aislado de dependencia pesada para no romper ejecución si falta
 try:
     import pyautogui
 except ImportError:
     pyautogui = None
 
+# --- TU UBICACIÓN FIJA (Recuerda poner tu link real aqui) ---
+LINK_CASA = "https://www.google.com/maps/place/La+Serena,+Coquimbo" 
 
 def ejecutar_envio_whatsapp(numero_contacto: str, mensaje: str) -> None:
     """
-    Abre WhatsApp Web para enviar un mensaje. Si pyautogui está disponible,
-    intenta presionar 'enter' automáticamente después de abrir la url.
-
-    Args:
-        numero_contacto (str): Número en formato internacional sin '+' (ej: '56912345678').
-        mensaje (str): Texto del mensaje.
+    Abre WhatsApp, espera y presiona Enter.
+    Es una función SINCRÓNICA (el código se detiene aquí hasta terminar).
     """
-    # Construir URL segura (espacios y caracteres especiales codificados)
-    import urllib.parse
-    texto = urllib.parse.quote(mensaje)
+    mensaje_completo = f"{mensaje} Ubicación: {LINK_CASA}"
+    texto = urllib.parse.quote(mensaje_completo)
     url = f"https://wa.me/{numero_contacto}?text={texto}"
+    
+    # 1. Abrir navegador
     webbrowser.open(url)
 
-    # Si no tenemos pyautogui, informamos al usuario y terminamos.
+    # Si no hay pyautogui, no podemos hacer más
     if pyautogui is None:
-        # Dejar que la UI maneje los mensajes (aquí solo mostramos mensaje simple)
-        messagebox.showinfo("Acción iniciada", "Se abrió WhatsApp Web. Complete el envío manualmente.\n(Instale pyautogui para automatizar: pip install pyautogui)")
+        print("Falta pyautogui. Enviar manual.")
         return
 
-    # Ejecutar secuencia en hilo aparte (no bloquear UI)
-    def tarea():
-        time.sleep(8)  # esperar a que cargue
-        try:
-            pyautogui.press('enter')
-            time.sleep(1)
-            pyautogui.press('enter')
-        except Exception:
-            # En caso de error con pyautogui, informar al usuario
-            messagebox.showwarning("Automatización fallida", "No se pudo automatizar el envío con pyautogui. Envíe el mensaje manualmente.")
+    # 2. ESPERA CRÍTICA: Damos 10 segundos para que cargue WhatsApp Web y el chat.
+    # Si tu PC es lento, sube esto a 15.
+    time.sleep(10)  
 
-    threading.Thread(target=tarea, daemon=True).start()
+    try:
+        # 3. Asegurar foco (Clic al medio por si acaso) y enviar
+        # width, height = pyautogui.size()
+        # pyautogui.click(width / 2, height / 2) # Opcional: hacer clic en el centro
+        
+        pyautogui.press('enter') # Primer enter para entrar al chat si sale popup
+        time.sleep(1)
+        pyautogui.press('enter') # Segundo enter para enviar mensaje
+        
+        # Esperamos un poco para asegurar que el mensaje salga antes de cerrar o cambiar
+        time.sleep(2) 
+        
+    except Exception as e:
+        print(f"Error automatizando: {e}")
