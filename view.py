@@ -1,24 +1,14 @@
 """
-view.py
-
-Interfaz gráfica (Tkinter). Implementa solo UI: botones, cuadros de diálogo y
-renderizado de las tareas. Depende del controlador para la lógica.
+view.py (Modificado)
 """
-
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 from datetime import datetime
 import threading
 
 from controller import AppController
-from models import Medicamento, Seguridad
-
 
 class InterfazAmador(tk.Frame):
-    """
-    Clase de la vista principal. Requiere una instancia de AppController.
-    """
-
     def __init__(self, root: tk.Tk, controller: AppController):
         super().__init__(root)
         self.root = root
@@ -31,7 +21,6 @@ class InterfazAmador(tk.Frame):
         self.estilo.theme_use('clam')
         self.estilo.configure("Clock.TLabel", font=("Arial", 30, "bold"), background="#E6F2F5", foreground="#34495E")
 
-        # Cargar tareas desde controlador
         self.tareas = self.controller.cargar_tareas()
 
         # --- UI Setup ---
@@ -66,9 +55,10 @@ class InterfazAmador(tk.Frame):
         self.frame_bottom = tk.Frame(root, bg="#2C3E50", height=80)
         self.frame_bottom.pack(fill="x", side="bottom")
 
+        # --- BOTÓN AYUDA (MODIFICADO: Sin confirmación) ---
         btn_ayuda = tk.Button(self.frame_bottom, text="🆘 NECESITO AYUDA",
                               font=("Arial", 14, "bold"), bg="#C0392B", fg="white",
-                              command=self.iniciar_proceso_ayuda)
+                              command=self.accion_ayuda_inmediata)
         btn_ayuda.pack(side="left", padx=20, pady=10, fill="x", expand=True)
 
         btn_admin = tk.Button(self.frame_bottom, text="⚙ Familia",
@@ -78,13 +68,11 @@ class InterfazAmador(tk.Frame):
 
     # ----- UI Helpers -----
     def actualizar_reloj(self) -> None:
-        """Actualiza el reloj en la UI cada segundo."""
         ahora = datetime.now().strftime("%H:%M:%S")
         self.lbl_reloj.config(text=ahora)
         self.root.after(1000, self.actualizar_reloj)
 
     def renderizar_tareas(self) -> None:
-        """Dibuja las tarjetas de tareas en la UI."""
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
 
@@ -113,82 +101,108 @@ class InterfazAmador(tk.Frame):
         self.barra["value"] = (completadas / total) * 100 if total > 0 else 0
 
     def marcar_completado(self, indice: int) -> None:
-        """Callback para marcar tarea como completada vía controlador."""
         self.controller.marcar_completado(indice)
-        messagebox.showinfo("Excelente", f"¡Muy bien!\nHas completado: {self.tareas[indice].nombre}")
-        # refrescar lista desde controlador (para consistencia)
         self.tareas = self.controller.cargar_tareas()
         self.renderizar_tareas()
 
-    def iniciar_proceso_ayuda(self) -> None:
-        """Inicia el flujo de envío de alerta a la familia."""
-        respuesta = messagebox.askyesno("EMERGENCIA", "¿Enviar alerta automática a la familia?")
-        if not respuesta:
-            return
+    # ----- LÓGICA AYUDA INMEDIATA (MODIFICADO) -----
+    def accion_ayuda_inmediata(self) -> None:
+        """Envía alerta a todos los contactos SIN PREGUNTAR NADA."""
+        # Se ejecuta en un hilo para no congelar la UI mientras se abren las pestañas
+        threading.Thread(target=self.controller.enviar_alerta_masiva, daemon=True).start()
+        
+        # Feedback visual simple de que algo pasó
+        messagebox.showinfo("ALERTA ENVIADA", "Se está enviando el mensaje de ayuda a tus contactos de emergencia.")
 
-        # Preguntar número y mensaje (podrían venir de configuración; pedimos al usuario)
-        numero = simpledialog.askstring("Número de contacto", "Ingrese número objetivo en formato internacional (ej: 569XXXXXXXX):")
-        if not numero:
-            messagebox.showwarning("Cancelado", "No se envió la alerta: número vacío.")
-            return
-        mensaje = simpledialog.askstring("Mensaje", "Texto del mensaje (predeterminado disponible):",
-                                         initialvalue="¡AYUDA! Necesito asistencia urgente en casa.")
-        if not mensaje:
-            mensaje = "¡AYUDA! Necesito asistencia urgente en casa."
-
-        # Ejecutar envío (controller maneja directamente utils)
-        threading.Thread(target=self.controller.enviar_alerta_familia, args=(numero, mensaje), daemon=True).start()
-        messagebox.showinfo("Alerta", "Se inició el proceso de envío. Verifica WhatsApp Web.")
-
-    # ----- Administración (agregar tareas) -----
+    # ----- Administración (Panel Familia) -----
     def solicitar_acceso_familia(self) -> None:
-        """
-        Solicita contraseña para entrar al modo familia. Si es válida, abre ventana para agregar.
-        """
         pwd = simpledialog.askstring("Acceso Familia", "Ingrese contraseña:", show='*')
-        if pwd is None:
-            return
+        if pwd is None: return
         if self.controller.verificar_contrasena(pwd):
-            self.abrir_ventana_agregar()
+            self.abrir_panel_familia()
         else:
             messagebox.showerror("Error", "Contraseña incorrecta")
 
-    def abrir_ventana_agregar(self) -> None:
-        """Ventana modal para agregar una nueva tarea."""
-        ventana_add = tk.Toplevel(self.root)
-        ventana_add.title("Agregar Tarea")
-        ventana_add.geometry("320x300")
+    def abrir_panel_familia(self) -> None:
+        """
+        Ventana unificada: Arriba agrega tareas, Abajo gestiona contactos.
+        """
+        ventana = tk.Toplevel(self.root)
+        ventana.title("Panel de Familia")
+        ventana.geometry("400x600")
 
-        tk.Label(ventana_add, text="Nombre:").pack(pady=(10, 0))
-        entry_nombre = tk.Entry(ventana_add); entry_nombre.pack(fill="x", padx=10)
+        # --- SECCIÓN 1: AGREGAR TAREAS ---
+        frame_tareas = tk.LabelFrame(ventana, text="1. Programar Nueva Tarea", font=("Arial", 10, "bold"), padx=10, pady=10)
+        frame_tareas.pack(fill="x", padx=10, pady=10)
 
-        tk.Label(ventana_add, text="Hora:").pack(pady=(8, 0))
-        entry_hora = tk.Entry(ventana_add); entry_hora.pack(fill="x", padx=10)
+        tk.Label(frame_tareas, text="Nombre:").pack(anchor="w")
+        entry_nombre = tk.Entry(frame_tareas); entry_nombre.pack(fill="x")
 
-        tk.Label(ventana_add, text="Extra (dosis/ubicación):").pack(pady=(8, 0))
-        entry_extra = tk.Entry(ventana_add); entry_extra.pack(fill="x", padx=10)
+        tk.Label(frame_tareas, text="Hora (HH:MM):").pack(anchor="w")
+        entry_hora = tk.Entry(frame_tareas); entry_hora.pack(fill="x")
+
+        tk.Label(frame_tareas, text="Extra (Dosis/Ubicación):").pack(anchor="w")
+        entry_extra = tk.Entry(frame_tareas); entry_extra.pack(fill="x")
 
         tipo_var = tk.StringVar(value="Medicamento")
-        tk.Radiobutton(ventana_add, text="Medicamento", variable=tipo_var, value="Medicamento").pack(anchor="w", padx=10, pady=4)
-        tk.Radiobutton(ventana_add, text="Seguridad", variable=tipo_var, value="Seguridad").pack(anchor="w", padx=10)
+        frame_radios = tk.Frame(frame_tareas); frame_radios.pack(anchor="w", pady=5)
+        tk.Radiobutton(frame_radios, text="Medicamento", variable=tipo_var, value="Medicamento").pack(side="left")
+        tk.Radiobutton(frame_radios, text="Seguridad", variable=tipo_var, value="Seguridad").pack(side="left", padx=10)
 
-        def guardar():
-            nombre = entry_nombre.get().strip()
-            hora = entry_hora.get().strip()
-            extra = entry_extra.get().strip()
-
-            if not nombre:
-                messagebox.showwarning("Datos incompletos", "El nombre no puede estar vacío.")
-                return
-
+        def guardar_tarea():
+            if not entry_nombre.get(): return
             if tipo_var.get() == "Medicamento":
-                self.controller.agregar_tarea_medicamento(nombre, hora, extra)
+                self.controller.agregar_tarea_medicamento(entry_nombre.get(), entry_hora.get(), entry_extra.get())
             else:
-                self.controller.agregar_tarea_seguridad(nombre, hora, extra)
-
-            # Recargar y renderizar
-            self.tareas = self.controller.cargar_tareas()
+                self.controller.agregar_tarea_seguridad(entry_nombre.get(), entry_hora.get(), entry_extra.get())
+            entry_nombre.delete(0, 'end'); entry_hora.delete(0, 'end'); entry_extra.delete(0, 'end')
+            self.tareas = self.controller.cargar_tareas() # Refrescar
             self.renderizar_tareas()
-            ventana_add.destroy()
+            messagebox.showinfo("Guardado", "Tarea agregada correctamente.")
 
-        tk.Button(ventana_add, text="Guardar", command=guardar).pack(pady=12)
+        tk.Button(frame_tareas, text="Guardar Tarea", bg="#27AE60", fg="white", command=guardar_tarea).pack(fill="x", pady=5)
+
+        # --- SECCIÓN 2: CONTACTOS EMERGENCIA ---
+        frame_contactos = tk.LabelFrame(ventana, text="2. Contactos de Emergencia (Alerta)", font=("Arial", 10, "bold"), padx=10, pady=10)
+        frame_contactos.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Lista de contactos actuales
+        listbox = tk.Listbox(frame_contactos, height=5)
+        listbox.pack(fill="x", pady=5)
+
+        def refrescar_lista():
+            listbox.delete(0, 'end')
+            contactos = self.controller.obtener_contactos()
+            for c in contactos:
+                listbox.insert('end', f"{c['nombre']} - {c['numero']}")
+
+        refrescar_lista() # Carga inicial
+
+        # Formulario contacto
+        tk.Label(frame_contactos, text="Nuevo Contacto (Nombre):").pack(anchor="w")
+        entry_c_nombre = tk.Entry(frame_contactos); entry_c_nombre.pack(fill="x")
+        
+        tk.Label(frame_contactos, text="Número (ej: 56912345678):").pack(anchor="w")
+        entry_c_numero = tk.Entry(frame_contactos); entry_c_numero.pack(fill="x")
+
+        def agregar_contacto():
+            nom = entry_c_nombre.get().strip()
+            num = entry_c_numero.get().strip()
+            if nom and num:
+                self.controller.agregar_contacto(nom, num)
+                entry_c_nombre.delete(0, 'end'); entry_c_numero.delete(0, 'end')
+                refrescar_lista()
+            else:
+                messagebox.showwarning("Error", "Faltan datos del contacto")
+
+        def borrar_contacto():
+            seleccion = listbox.curselection()
+            if seleccion:
+                idx = seleccion[0]
+                self.controller.eliminar_contacto(idx)
+                refrescar_lista()
+
+        btn_box = tk.Frame(frame_contactos)
+        btn_box.pack(fill="x", pady=5)
+        tk.Button(btn_box, text="Agregar Contacto", bg="#2980B9", fg="white", command=agregar_contacto).pack(side="left", expand=True, fill="x")
+        tk.Button(btn_box, text="Borrar Seleccionado", bg="#C0392B", fg="white", command=borrar_contacto).pack(side="right", expand=True, fill="x")
