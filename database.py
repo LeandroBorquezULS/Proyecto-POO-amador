@@ -1,4 +1,6 @@
-
+"""
+database.py
+"""
 import csv
 import json
 import os
@@ -7,15 +9,15 @@ from models import TareaBase, Medicamento, Seguridad
 
 class GestorBaseDatos:
     ARCHIVO_TAREAS = "agenda_amador.csv"
-    ARCHIVO_CONTACTOS = "contactos.json" # Nuevo archivo para guardar los números
+    ARCHIVO_CONTACTOS = "contactos.json"
 
-    # --- MANEJO DE TAREAS (Igual que antes) ---
     @classmethod
     def guardar_todo(cls, lista_tareas: List[TareaBase]) -> None:
         try:
             with open(cls.ARCHIVO_TAREAS, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
-                writer.writerow(["Tipo", "Nombre", "Hora", "Extra", "Estado"])
+                # Agregamos "Frecuencia" al encabezado
+                writer.writerow(["Tipo", "Nombre", "Hora", "Extra", "Estado", "Frecuencia"])
                 for t in lista_tareas:
                     writer.writerow(t.to_csv_row())
         except IOError:
@@ -31,21 +33,23 @@ class GestorBaseDatos:
                 reader = csv.DictReader(f)
                 for row in reader:
                     tipo = row.get("Tipo", "General")
+                    # Recuperamos la frecuencia, por defecto "Diaria" si no existe
+                    freq = row.get("Frecuencia", "Diaria")
+                    
                     if tipo == "Medicamento":
-                        obj = Medicamento(row.get("Nombre", ""), row.get("Hora", ""), row.get("Extra", ""), row.get("Estado", "Pendiente"))
+                        obj = Medicamento(row.get("Nombre", ""), row.get("Hora", ""), row.get("Extra", ""), row.get("Estado", "Pendiente"), freq)
                     elif tipo == "Seguridad":
-                        obj = Seguridad(row.get("Nombre", ""), row.get("Hora", ""), row.get("Extra", ""), row.get("Estado", "Pendiente"))
+                        obj = Seguridad(row.get("Nombre", ""), row.get("Hora", ""), row.get("Extra", ""), row.get("Estado", "Pendiente"), freq)
                     else:
-                        obj = TareaBase(row.get("Nombre", ""), row.get("Hora", ""), row.get("Estado", "Pendiente"))
+                        obj = TareaBase(row.get("Nombre", ""), row.get("Hora", ""), row.get("Estado", "Pendiente"), freq)
                     tareas.append(obj)
             return tareas
         except Exception:
             return []
 
-    # --- NUEVO: MANEJO DE CONTACTOS ---
+    # --- CONTACTOS (IGUAL QUE ANTES) ---
     @classmethod
     def guardar_contactos(cls, lista_contactos: List[Dict[str, str]]) -> None:
-        """Guarda la lista de diccionarios de contactos en JSON."""
         try:
             with open(cls.ARCHIVO_CONTACTOS, 'w', encoding='utf-8') as f:
                 json.dump(lista_contactos, f, indent=4)
@@ -54,7 +58,6 @@ class GestorBaseDatos:
 
     @classmethod
     def cargar_contactos(cls) -> List[Dict[str, str]]:
-        """Carga la lista de contactos. Retorna lista vacía si falla o no existe."""
         if not os.path.exists(cls.ARCHIVO_CONTACTOS):
             return []
         try:
