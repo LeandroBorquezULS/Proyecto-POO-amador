@@ -55,6 +55,7 @@ La forma que se encontró una solución a este problema, es desarrollar una apli
     python main.py 
     # (Asegúrate de que 'main.py' es el archivo principal)
     ```
+---
 
 ## 🏗️ Estructura del Proyecto
 
