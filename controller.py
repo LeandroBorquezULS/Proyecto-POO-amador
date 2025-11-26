@@ -7,6 +7,10 @@ from database import GestorBaseDatos
 import auth
 import utils
 import time
+import pyttsx3
+import threading
+import queue
+import subprocess
 
 class AppController:
     def __init__(self):
@@ -85,3 +89,21 @@ class AppController:
         """Envío de emergencia a un número manual."""
         mensaje = "¡AYUDA! Necesito asistencia urgente (Número manual)."
         utils.ejecutar_envio_whatsapp(numero, mensaje)
+
+    def _generar_texto_tts(self, tarea):
+        if isinstance(tarea, Medicamento):
+            return f"Debe tomar {tarea.nombre}, dosis {tarea.dosis}, a las {tarea.hora} horas."
+        elif isinstance(tarea, Seguridad):
+            return f"{tarea.nombre}, en {tarea.ubicacion}, a las {tarea.hora} horas."
+        else:
+            return f"{tarea.nombre}, a las {tarea.hora} horas."
+
+    def hablar_tarea(self, tarea):
+        texto = self._generar_texto_tts(tarea)
+        threading.Thread(target=self._sapi_tts, args=(texto,), daemon=True).start()
+
+    def _sapi_tts(self, texto):
+        comando = f'powershell -Command "Add-Type –AssemblyName System.Speech; ' \
+                  f'$speak = New-Object System.Speech.Synthesis.SpeechSynthesizer; ' \
+                  f'$speak.Speak(\\"{texto}\\")"'
+        subprocess.run(comando, shell=True)

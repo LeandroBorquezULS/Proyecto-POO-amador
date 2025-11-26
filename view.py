@@ -213,7 +213,20 @@ class InterfazAmador(tk.Frame):
                 texto_mostrar += f"\n({detalle})"
             # -----------------------
 
-            tk.Label(row, text=texto_mostrar, font=FUENTES["tarea_txt"], bg=bg_c, fg=fg_c, justify="left").pack(side="left", padx=10)
+            # Texto tarea
+            frame_texto = tk.Frame(card, bg=bg_color)
+            frame_texto.pack(side="left", padx=15)
+
+            tk.Label(frame_texto, text=tarea.get_descripcion_visual(),
+                    font=("Arial", 16), bg=bg_color, fg=fg_color, justify="left").pack(anchor="w")
+
+            tk.Button(
+                frame_texto,
+                text="▶️",
+                font=("Arial", 14, "bold"),
+                bg="#F1C40F",
+                command=lambda t=tarea: self.controller.hablar_tarea(t)
+            ).pack(anchor="w", pady=3)
 
             # Acción
             if tarea.estado == "Pendiente":
