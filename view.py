@@ -170,7 +170,7 @@ class InterfazAmador(tk.Frame):
         completadas = 0
         total = len(self.tareas)
 
-        # Cabecera simulada de tabla
+        # Cabecera de tabla
         if total > 0:
             h_row = tk.Frame(self.scrollable_frame, bg="black", height=35)
             h_row.pack(fill="x", pady=(0,5))
@@ -178,6 +178,8 @@ class InterfazAmador(tk.Frame):
             tk.Label(h_row, text="ACTIVIDAD", fg="white", bg="black", font=("Arial",11,"bold")).pack(side="left", padx=10)
 
         for idx, tarea in enumerate(self.tareas):
+
+            # Colores según estado
             if tarea.estado == "Completado":
                 completadas += 1
                 bg_c = COLORES["tarea_done"]
@@ -188,38 +190,35 @@ class InterfazAmador(tk.Frame):
                 fg_c = "black"
                 estado_txt = ""
 
-            # Fila
+            # Fila de tarea
             row = tk.Frame(self.scrollable_frame, bg=bg_c, bd=1, relief="solid")
             row.pack(fill="x", pady=4, ipady=10)
 
-            # Hora
-            tk.Label(row, text=tarea.hora, font=FUENTES["tarea_hora"], bg=bg_c, fg="black", width=8).pack(side="left", padx=5)
-            
+            # Columna izquierda: Hora
+            tk.Label(row, text=tarea.hora, font=FUENTES["tarea_hora"],
+                    bg=bg_c, fg="black", width=8).pack(side="left", padx=5)
+
             # Separador
             tk.Frame(row, bg="black", width=2).pack(side="left", fill="y", padx=5)
 
-            # --- CORRECCIÓN AQUÍ ---
-            # Icono
-            icono = "💊" if "edicamento" in tarea.nombre.lower() or "astilla" in tarea.nombre.lower() else "📝"
-            
-            # Construcción segura del texto
-            texto_mostrar = f"{icono} {tarea.nombre}"
-            
-            # Buscamos el detalle de forma segura. 
-            # Primero intenta 'detalle_extra', si no existe, prueba 'detalles', si no, cadena vacía.
-            detalle = getattr(tarea, 'detalle_extra', getattr(tarea, 'detalles', getattr(tarea, 'descripcion', '')))
-            
-            if detalle:
-                texto_mostrar += f"\n({detalle})"
-            # -----------------------
+            # --- Construcción del texto de tarea ---
+            icono = "💊" if "edicamento" in tarea.nombre.lower() or "pastilla" in tarea.nombre.lower() else "📝"
+            texto = f"{icono} {tarea.nombre}"
 
-            # Texto tarea
-            frame_texto = tk.Frame(card, bg=bg_color)
+            detalle = getattr(tarea, 'detalle_extra', getattr(tarea, 'detalles',
+                        getattr(tarea, 'descripcion', '')))
+            if detalle:
+                texto += f"\n({detalle})"
+
+            # Frame del texto + botón
+            frame_texto = tk.Frame(row, bg=bg_c)
             frame_texto.pack(side="left", padx=15)
 
-            tk.Label(frame_texto, text=tarea.get_descripcion_visual(),
-                    font=("Arial", 16), bg=bg_color, fg=fg_color, justify="left").pack(anchor="w")
+            # Texto
+            tk.Label(frame_texto, text=texto, font=("Arial", 16),
+                    bg=bg_c, fg=fg_c, justify="left").pack(anchor="w")
 
+            # Botón hablar
             tk.Button(
                 frame_texto,
                 text="▶️",
@@ -228,16 +227,19 @@ class InterfazAmador(tk.Frame):
                 command=lambda t=tarea: self.controller.hablar_tarea(t)
             ).pack(anchor="w", pady=3)
 
-            # Acción
+            # Botón marcar o estado
             if tarea.estado == "Pendiente":
-                btn = tk.Button(row, text="MARCAR LISTO", bg=COLORES["btn_accion"], fg="white",
-                                font=FUENTES["btn_txt"], relief="raised", bd=3,
-                                command=lambda i=idx: self.marcar_completado(i))
-                btn.pack(side="right", padx=15)
+                tk.Button(
+                    row, text="MARCAR LISTO",
+                    bg=COLORES["btn_accion"], fg="white",
+                    font=FUENTES["btn_txt"], relief="raised", bd=3,
+                    command=lambda i=idx: self.marcar_completado(i)
+                ).pack(side="right", padx=15)
             else:
-                tk.Label(row, text=estado_txt, font=("Arial", 12, "bold"), bg=bg_c, fg=fg_c).pack(side="right", padx=20)
+                tk.Label(row, text=estado_txt, font=("Arial", 12, "bold"),
+                        bg=bg_c, fg=fg_c).pack(side="right", padx=20)
 
-        # Actualizar Sidebar
+        # Actualización de barra de progreso
         porcentaje = (completadas / total * 100) if total > 0 else 0
         self.barra["value"] = porcentaje
         self.lbl_porcentaje.config(text=f"{int(porcentaje)}%")
