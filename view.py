@@ -231,6 +231,34 @@ class InterfazAmador(tk.Frame):
             mis_tareas = self.controller.cargar_tareas() # Cargar frescas
             for t in mis_tareas:
                 lb_tareas.insert('end', f"{t.hora} - {t.nombre} ({t.frecuencia})")
+                
+                # --- (PEGAR ESTO DENTRO DE abrir_panel_familia, AL FINAL) ---
+        
+        # 4. SEGURIDAD (CAMBIAR CONTRASEÑA)
+        frame_seguridad = tk.LabelFrame(ventana, text="4. Seguridad", font=("Arial", 10, "bold"), fg="#8E44AD")
+        frame_seguridad.pack(fill="x", padx=10, pady=10)
+
+        def cambiar_contrasena():
+            # 1. Pedir nueva
+            nueva_pass = simpledialog.askstring("Cambio de Clave", "Ingrese la NUEVA contraseña (mínimo 6 caracteres):", show='*', parent=ventana)
+            if not nueva_pass: return # Si cancela
+            
+            if len(nueva_pass) < 6:
+                messagebox.showwarning("Error", "La contraseña es muy corta (mínimo 6).")
+                return
+
+            # 2. Confirmar nueva
+            confirm_pass = simpledialog.askstring("Confirmar", "Repita la nueva contraseña:", show='*', parent=ventana)
+            
+            if nueva_pass == confirm_pass:
+                self.controller.establecer_contrasena(nueva_pass)
+                messagebox.showinfo("Éxito", "¡Contraseña actualizada correctamente!")
+            else:
+                messagebox.showerror("Error", "Las contraseñas no coinciden.")
+
+        tk.Button(frame_seguridad, text="🔐 CAMBIAR CONTRASEÑA DE ADMINISTRADOR", 
+                  bg="#8E44AD", fg="white", font=("Arial", 9, "bold"),
+                  command=cambiar_contrasena).pack(fill="x", pady=5)
 
         refrescar_lista_tareas_admin()
 
