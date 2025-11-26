@@ -7,10 +7,10 @@ La forma que se encontró una solución a este problema, es desarrollar una apli
 
 
 # Características Principales
-🚨 El Botón de Pánico que consiste en mandar un mensaje automatizado de alerta por WhatsApp a los contactos que se registraron previamente, sin necesidad de escribir
-🔒 El Panel Familiar Seguro que es un área protegida con una contraseña para que la familia configure las tareas y contactos, esto para evitar que Amador borre información por error
-♿ Una Interfaz accesible con botones de gran tamaño, alto contraste, tipogtafías legibles (Arial 16)
-⏰ Gestión de Tareas y seguridad que hay recordatorios claros para medicamentos y seguridad (gas/puertas)
+-🚨 El Botón de Pánico que consiste en mandar un mensaje automatizado de alerta por WhatsApp a los contactos que se registraron previamente, sin necesidad de escribir
+-🔒 El Panel Familiar Seguro que es un área protegida con una contraseña para que la familia configure las tareas y contactos, esto para evitar que Amador borre información por error
+-♿ Una Interfaz accesible con botones de gran tamaño, alto contraste, tipogtafías legibles (Arial 16)
+-⏰ Gestión de Tareas y seguridad que hay recordatorios claros para medicamentos y seguridad (gas/puertas)
 
 ---
 
