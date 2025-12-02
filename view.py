@@ -246,6 +246,8 @@ class InterfazAmador(tk.Frame):
         self.lbl_porcentaje.config(fg=COLORES["btn_verde"] if porcentaje == 100 else "white")
 
     def marcar_completado(self, indice: int) -> None:
+        from utils import reproducir_sonido_exito
+        reproducir_sonido_exito()
         self.controller.marcar_completado(indice)
         self.tareas = self.controller.cargar_tareas()
         self.renderizar_tareas()
