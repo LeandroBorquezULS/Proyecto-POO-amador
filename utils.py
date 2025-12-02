@@ -10,6 +10,16 @@ try:
 except ImportError:
     pyautogui = None
 
+import winsound
+
+def reproducir_sonido_exito():
+    """Reproduce el archivo de sonido checklist_ok.wav."""
+    try:
+        # Reproducir archivo WAV de forma asíncrona
+        winsound.PlaySound("checklist_ok.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
+    except Exception as e:
+        print(f"Error reproduciendo sonido: {e}")
+
 
 def ejecutar_envio_whatsapp(numero_contacto: str, mensaje: str) -> None:
 
