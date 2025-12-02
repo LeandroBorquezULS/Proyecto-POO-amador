@@ -12,11 +12,26 @@ except ImportError:
 
 import winsound
 
+import sys
+import os
+
+def resource_path(relative_path):
+    """ Obtiene la ruta absoluta al recurso, funciona para dev y PyInstaller """
+    try:
+        # PyInstaller crea una carpeta temporal en _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 def reproducir_sonido_exito():
     """Reproduce el archivo de sonido checklist_ok.wav."""
     try:
+        # Resolver ruta correcta (ya sea script o exe)
+        archivo = resource_path("checklist_ok.wav")
         # Reproducir archivo WAV de forma asíncrona
-        winsound.PlaySound("checklist_ok.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
+        winsound.PlaySound(archivo, winsound.SND_FILENAME | winsound.SND_ASYNC)
     except Exception as e:
         print(f"Error reproduciendo sonido: {e}")
 
